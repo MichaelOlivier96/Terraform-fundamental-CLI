@@ -1,45 +1,31 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-provider "aws" {
-  region = var.region
+provider "azurerm" {
+  features {}
 }
 
 provider "random" {}
-
-data "aws_ami" "ubuntu" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"] # Canonical
-}
 
 resource "random_pet" "instance" {
   length = 2
 }
 
-module "ec2-instance" {
-  source = "./modules/aws-ec2-instance"
+module "azure_vm" {
+  source = "./modules/azure-virtual-machine"
 
-  ami_id        = data.aws_ami.ubuntu.id
-  instance_name = random_pet.instance.id
+  prefix   = "${var.project_name}-${random_pet.instance.id}"
+  location = var.location
 }
 
 module "hello" {
   source  = "joatmon08/hello/random"
-  version = "4.0.0"
+  version = "6.0.0"
 
-  hello        = "World"
-  second_hello = random_pet.instance.id
+  hellos = {
+    hello        = random_pet.instance.id
+    second_hello = "World"
+  }
 
-  secret_key = "secret"
+  some_key = "secret"
 }
