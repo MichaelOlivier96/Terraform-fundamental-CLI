@@ -1,11 +1,11 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-variable "region" {
+variable "location" {
   type        = string
-  description = "AWS region for all resources."
+  description = "Azure region for all resources."
 
-  default = "us-east-1"
+  default = "southafricanorth"
 }
 
 variable "project_name" {
