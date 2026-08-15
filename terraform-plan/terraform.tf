@@ -3,9 +3,9 @@
 
 terraform {
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "6.2.0"
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
     }
 
     random = {
@@ -13,15 +13,6 @@ terraform {
       version = "3.5.1"
     }
   }
-
-  /* Uncomment this block to use Terraform Cloud for this tutorial
-  cloud {
-    organization = "organization-name"
-    workspaces {
-      name = "learn-terraform-plan"
-    }
-  }
-*/
 
   required_version = "~> 1.6"
 }
