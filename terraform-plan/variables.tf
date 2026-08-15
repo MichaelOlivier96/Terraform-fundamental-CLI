@@ -1,11 +1,11 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-variable "region" {
+variable "location" {
   type        = string
-  description = "AWS region for all resources."
+  description = "Azure region for all resources."
 
-  default = "us-east-1"
+  default = "southafricanorth"
 }
 
 variable "project_name" {
@@ -13,4 +13,10 @@ variable "project_name" {
   description = "Name of the example project."
 
   default = "terraform-plan"
+}
+
+variable "secret_key" {
+  type        = string
+  sensitive   = true
+  description = "Secret key for hello module"
 }
