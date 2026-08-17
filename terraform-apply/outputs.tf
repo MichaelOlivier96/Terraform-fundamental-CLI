@@ -3,7 +3,7 @@
 
 ## Output values
 
-output "bucket_name" {
-  description = "Name of S3 bucket"
-  value       = aws_s3_bucket.example.bucket
+output "storage_account_name" {
+  description = "Name of the Azure Storage Account"
+  value       = azurerm_storage_account.example.name
 }
