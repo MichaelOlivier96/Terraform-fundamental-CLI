@@ -3,29 +3,29 @@
 
 # Output declarations
 
-output "vpc_id" {
-  description = "ID of project VPC"
-  value       = module.vpc.vpc_id
+output "vnet_id" {
+  description = "ID of project VNet"
+  value       = azurerm_virtual_network.main.id
 }
 
 output "lb_url" {
   description = "URL of load balancer"
-  value       = "http://${module.elb_http.elb_dns_name}/"
+  value       = "http://${azurerm_public_ip.lb_pip.fqdn}/"
 }
 
 output "web_server_count" {
   description = "Number of web servers provisioned"
-  value       = length(module.ec2_instances.instance_ids)
+  value       = length(module.vm_instances.instance_ids)
 }
 
 output "db_username" {
   description = "Database administrator username"
-  value       = aws_db_instance.database.username
+  value       = azurerm_mysql_flexible_server.database.administrator_login
   sensitive   = true
 }
 
 output "db_password" {
   description = "Database administrator password"
-  value       = aws_db_instance.database.password
+  value       = azurerm_mysql_flexible_server.database.administrator_password
   sensitive   = true
 }

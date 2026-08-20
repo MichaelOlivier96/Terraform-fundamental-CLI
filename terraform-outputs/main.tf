@@ -1,113 +1,90 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-provider "aws" {
-  region = var.aws_region
+provider "azurerm" {
+  features {}
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-
-  filter {
-    name   = "opt-in-status"
-    values = ["opt-in-not-required"]
-  }
-}
-
-module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.7.0"
-
-  cidr = var.vpc_cidr_block
-
-  azs             = data.aws_availability_zones.available.names
-  private_subnets = slice(var.private_subnet_cidr_blocks, 0, 2)
-  public_subnets  = slice(var.public_subnet_cidr_blocks, 0, 2)
-
-  enable_nat_gateway = true
-  enable_vpn_gateway = false
-}
-
-module "app_security_group" {
-  source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "5.1.2"
-
-  name        = "web-server-sg"
-  description = "Security group for web-servers with HTTP ports open within VPC"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress_cidr_blocks = module.vpc.public_subnets_cidr_blocks
-}
-
-module "lb_security_group" {
-  source  = "terraform-aws-modules/security-group/aws//modules/web"
-  version = "5.1.2"
-
-  name        = "lb-sg-project-alpha-dev"
-  description = "Security group for load balancer with HTTP ports open within VPC"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-}
-
-resource "random_string" "lb_id" {
-  length  = 3
+resource "random_string" "suffix" {
+  length  = 4
   special = false
+  upper   = false
 }
 
-module "elb_http" {
-  source  = "terraform-aws-modules/elb/aws"
-  version = "4.0.2"
+# 1. Base Networking
+resource "azurerm_resource_group" "main" {
+  name     = "rg-outputs-tutorial"
+  location = var.location
+}
 
-  # Ensure load balancer name is unique
-  name = "lb-${random_string.lb_id.result}-project-alpha-dev"
+resource "azurerm_virtual_network" "main" {
+  name                = "vnet-outputs"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  address_space       = [var.vnet_address_space]
+}
 
-  internal = false
+resource "azurerm_subnet" "private" {
+  count                = length(var.private_subnet_cidr_blocks)
+  name                 = "private-subnet-${count.index}"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = [var.private_subnet_cidr_blocks[count.index]]
+}
 
-  security_groups = [module.lb_security_group.security_group_id]
-  subnets         = module.vpc.public_subnets
+# 2. Database Dedicated Subnet & MySQL Server
+resource "azurerm_subnet" "database" {
+  name                 = "database-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.200.0/24"]
 
-  number_of_instances = length(module.ec2_instances.instance_ids)
-  instances           = module.ec2_instances.instance_ids
-
-  listener = [{
-    instance_port     = "80"
-    instance_protocol = "HTTP"
-    lb_port           = "80"
-    lb_protocol       = "HTTP"
-  }]
-
-  health_check = {
-    target              = "HTTP:80/index.html"
-    interval            = 10
-    healthy_threshold   = 3
-    unhealthy_threshold = 10
-    timeout             = 5
+  delegation {
+    name = "fs"
+    service_delegation {
+      name    = "Microsoft.DBforMySQL/flexibleServers"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
   }
 }
 
-module "ec2_instances" {
-  source = "./modules/aws-instance"
-
-  instance_count     = var.instances_per_subnet * length(module.vpc.private_subnets)
-  instance_type      = var.instance_type
-  subnet_ids         = module.vpc.private_subnets[*]
-  security_group_ids = [module.app_security_group.security_group_id]
+resource "azurerm_mysql_flexible_server" "database" {
+  name                   = "mysql-db-${random_string.suffix.result}"
+  resource_group_name    = azurerm_resource_group.main.name
+  location               = azurerm_resource_group.main.location
+  administrator_login    = var.db_username
+  administrator_password = var.db_password
+  sku_name               = "B_Standard_B1s"
+  delegated_subnet_id    = azurerm_subnet.database.id
 }
 
-resource "aws_db_subnet_group" "private" {
-  subnet_ids = module.vpc.private_subnets
+# 3. Load Balancer & Public IP
+resource "azurerm_public_ip" "lb_pip" {
+  name                = "pip-lb"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  domain_name_label   = "lb-outputs-${random_string.suffix.result}"
 }
 
-resource "aws_db_instance" "database" {
-  allocated_storage = 5
-  engine            = "mysql"
-  engine_version    = "5.7"
-  instance_class    = "db.t3.micro"
-  username          = var.db_username
-  password          = var.db_password
+resource "azurerm_lb" "main" {
+  name                = "lb-outputs"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 
-  db_subnet_group_name = aws_db_subnet_group.private.name
+  frontend_ip_configuration {
+    name                 = "PublicIPAddress"
+    public_ip_address_id = azurerm_public_ip.lb_pip.id
+  }
+}
 
-  skip_final_snapshot = true
+# 4. Compute Module
+module "vm_instances" {
+  source = "./modules/azure-instance"
+
+  instance_count      = var.instances_per_subnet * length(azurerm_subnet.private)
+  vm_size             = var.vm_size
+  subnet_ids          = azurerm_subnet.private[*].id
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
 }
