@@ -3,12 +3,12 @@
 
 # Output declarations
 
-output "bucket_name" {
-  description = "Randomly generated bucket name."
-  value       = random_pet.bucket_name.id
+output "storage_account_name" {
+  description = "Name of the Azure Storage Account"
+  value       = azurerm_storage_account.sa.name
 }
 
-output "bucket_arn" {
-  description = "ARN of bucket"
-  value       = module.s3_bucket.s3_bucket_arn
+output "storage_container_name" {
+  description = "Name of the Azure Storage Container"
+  value       = azurerm_storage_container.container.name
 }

@@ -1,36 +1,37 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-provider "aws" {
-  region = var.aws_region
+provider "azurerm" {
+  features {}
+}
 
-  default_tags {
-    tags = {
-      hashicorp-learn = "resource-targeting"
-    }
+resource "azurerm_resource_group" "rg" {
+  name     = "rg-terraform-targeting"
+  location = var.location
+
+  tags = {
+    hashicorp-learn = "resource-targeting"
   }
 }
 
-resource "random_pet" "bucket_name" {
-  length    = 3
-  separator = "-"
-  prefix    = "learning"
+resource "random_string" "storage_name" {
+  length  = 15
+  special = false
+  upper   = false
 }
 
-module "s3_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "4.1.1"
+resource "azurerm_storage_account" "sa" {
+  name                     = "stlearn${random_string.storage_name.result}"
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
 
-  bucket = random_pet.bucket_name.id
-  acl    = "private"
-
-  control_object_ownership = true
-  object_ownership         = "BucketOwnerPreferred"
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
+resource "azurerm_storage_container" "container" {
+  name                  = "content"
+  storage_account_name  = azurerm_storage_account.sa.name
+  container_access_type = "blob"
 }
 
 resource "random_pet" "object_names" {
@@ -41,12 +42,12 @@ resource "random_pet" "object_names" {
   prefix    = "learning"
 }
 
-resource "aws_s3_object" "objects" {
+resource "azurerm_storage_blob" "objects" {
   count = 4
 
-  acl          = "public-read"
-  key          = "${random_pet.object_names[count.index].id}.txt"
-  bucket       = module.s3_bucket.s3_bucket_id
-  content      = "Example object #${count.index}"
-  content_type = "text/plain"
+  name                   = "${random_pet.object_names[count.index].id}.txt"
+  storage_account_name   = azurerm_storage_account.sa.name
+  storage_container_name = azurerm_storage_container.container.name
+  type                   = "Block"
+  source_content         = "Example object #${count.index}"
 }
