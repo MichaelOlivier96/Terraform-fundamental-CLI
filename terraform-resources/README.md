@@ -1,5 +1,7 @@
-# Learn Terraform Resource Targeting
+# Section 08: Terraform Target Resources (terraform-resources)
 
-This repo is a companion repo to the [Terraform Resource Targeting tutorial](https://developer.hashicorp.com/terraform/tutorials/state/resource-targeting).
-
-It contains Terraform configuration you can use to learn how to implement an S3 bucket and bucket objects with Terraform resource targeting.
+## Key Takeaways
+* **Target Flag Syntax**: Use `-target=<RESOURCE_ADDRESS>` to apply updates to a single resource or subset of resources.
+  * Example targeting a specific blob: `terraform apply -target=azurerm_storage_blob.objects[0]`
+* **Use Cases**: Use targeting strictly for exceptional recovery scenarios, breaking dependency cycles, or emergency updates.
+* **Risks**: Avoid routine targeting as it can create state drift and unintended dependency omissions, and why HashiCorp recommends using it primarily for exceptional fix scenarios rather than routine workflows.
