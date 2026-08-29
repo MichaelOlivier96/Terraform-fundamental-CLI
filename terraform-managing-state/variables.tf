@@ -1,5 +1,5 @@
-variable "aws_region" {
+variable "location" {
   type        = string
-  default     = "us-east-1"
-  description = "The AWS region your resources will be deployed"
+  default     = "southafricanorth"
+  description = "The Azure location where your resources will be deployed"
 }

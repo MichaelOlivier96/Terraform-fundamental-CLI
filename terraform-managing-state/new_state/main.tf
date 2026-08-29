@@ -1,21 +1,5 @@
-provider "aws" {
-  region = var.aws_region
-}
-
-data "aws_ami" "ubuntu" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"] # Canonical
+provider "azurerm" {
+  features {}
 }
 
 data "terraform_remote_state" "root" {
@@ -26,11 +10,72 @@ data "terraform_remote_state" "root" {
   }
 }
 
-resource "aws_instance" "example_new" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t2.micro"
-  vpc_security_group_ids = [data.terraform_remote_state.root.outputs.security_group]
-  user_data              = <<-EOF
+# Fetch the networking backbone created in the root directory
+data "azurerm_resource_group" "existing" {
+  name = "terraform-learn-state-rg"
+}
+
+data "azurerm_subnet" "existing" {
+  name                 = "internal"
+  virtual_network_name = "terraform-learn-state-vnet"
+  resource_group_name  = data.azurerm_resource_group.existing.name
+}
+
+resource "azurerm_public_ip" "example_new" {
+  name                = "terraform-learn-state-pip-new"
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+resource "azurerm_network_interface" "example_new" {
+  name                = "terraform-learn-state-nic-new"
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = data.azurerm_subnet.existing.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.example_new.id
+  }
+}
+
+# Dynamically apply the Network Security Group ID retrieved from the root state
+resource "azurerm_network_interface_security_group_association" "example_new" {
+  network_interface_id      = azurerm_network_interface.example_new.id
+  network_security_group_id = data.terraform_remote_state.root.outputs.security_group
+}
+
+resource "azurerm_linux_virtual_machine" "example_new" {
+  name                = "terraform-learn-state-vm-new"
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
+  size                = "Standard_B2s"
+  admin_username      = "azureuser"
+  network_interface_ids = [
+    azurerm_network_interface.example_new.id,
+  ]
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts-gen2"
+    version   = "latest"
+  }
+
+  custom_data = base64encode(<<-EOF
               #!/bin/bash
               apt-get update
               apt-get install -y apache2
@@ -38,7 +83,5 @@ resource "aws_instance" "example_new" {
               echo "Hello World" > /var/www/html/index.html
               systemctl restart apache2
               EOF
-  tags = {
-    Name = "terraform-learn-state-ec2"
-  }
+  )
 }
