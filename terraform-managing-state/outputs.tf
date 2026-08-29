@@ -1,19 +1,19 @@
 output "instance_id" {
-  value       = aws_instance.example.id
-  description = "The ID of the AWS instance"
+  value       = azurerm_linux_virtual_machine.example.id
+  description = "The ID of the Azure VM"
 }
 
 output "public_ip" {
-  value       = aws_instance.example.public_ip
+  value       = azurerm_public_ip.example.ip_address
   description = "The public IP of the web server"
 }
 
-output "aws_region" {
-  value       = var.aws_region
-  description = "AWS region for all resources"
+output "location" {
+  value       = var.location
+  description = "Azure location for all resources"
 }
 
 output "security_group" {
-  value       = aws_security_group.sg_8080.id
-  description = "The security group for the AWS instance"
+  value       = azurerm_network_security_group.sg_8080.id
+  description = "The security group for the Azure instance"
 }
