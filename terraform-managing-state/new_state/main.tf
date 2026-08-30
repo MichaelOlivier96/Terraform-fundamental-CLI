@@ -52,7 +52,7 @@ resource "azurerm_linux_virtual_machine" "example_new" {
   name                = "terraform-learn-state-vm-new"
   location            = data.azurerm_resource_group.existing.location
   resource_group_name = data.azurerm_resource_group.existing.name
-  size                = "Standard_B2s"
+  size                = "Standard_D2s_v5"
   admin_username      = "azureuser"
   network_interface_ids = [
     azurerm_network_interface.example_new.id,
