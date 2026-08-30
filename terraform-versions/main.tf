@@ -49,15 +49,18 @@ resource "azurerm_network_interface" "web" {
     public_ip_address_id          = azurerm_public_ip.web.id
   }
 }
-#Hardcoded username and password for tutorial purposes only.
+
 resource "azurerm_linux_virtual_machine" "web" {
-  name                            = "vm-${random_pet.name.id}"
-  resource_group_name             = azurerm_resource_group.web.name
-  location                        = azurerm_resource_group.web.location
-  size                            = "Standard_B2s"
-  admin_username                  = "azureuser"
-  admin_password                  = "P@ssw0rd1234!"
-  disable_password_authentication = false
+  name                = "vm-${random_pet.name.id}"
+  resource_group_name = azurerm_resource_group.web.name
+  location            = azurerm_resource_group.web.location
+  size                = "Standard_B2s"
+  admin_username      = "azureuser"
+
+  admin_ssh_key {
+    username   = "azureuser"
+    public_key = file(pathexpand("~/.ssh/id_rsa.pub"))
+  }
 
   network_interface_ids = [
     azurerm_network_interface.web.id,

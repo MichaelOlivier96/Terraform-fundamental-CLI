@@ -65,40 +65,12 @@ resource "azurerm_network_interface_security_group_association" "example" {
   network_security_group_id = azurerm_network_security_group.sg_8080.id
 }
 
-resource "azurerm_linux_virtual_machine" "example" {
-  name                = "terraform-learn-state-vm"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
-  size                = "Standard_B2s"
-  admin_username      = "azureuser"
-  network_interface_ids = [
-    azurerm_network_interface.example.id,
-  ]
+#removed {
+#  from = azurerm_linux_virtual_machine.example
+#
+#  lifecycle {
+#    destroy = false
+#  }
+#}
 
-  admin_ssh_key {
-    username   = "azureuser"
-    public_key = file(pathexpand("~/.ssh/id_rsa.pub"))
-  }
 
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-focal"
-    sku       = "20_04-lts-gen2"
-    version   = "latest"
-  }
-
-  custom_data = base64encode(<<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y apache2
-              sed -i -e 's/80/8080/' /etc/apache2/ports.conf
-              echo "Hello World" > /var/www/html/index.html
-              systemctl restart apache2
-              EOF
-  )
-}
