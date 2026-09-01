@@ -1,13 +1,11 @@
-## Learn Terraform Import
+## Section 10: Terraform Import (`terraform-imports`)
 
-Learn how to import existing resources under Terraform's management.
+### Overview
+This directory documents the workflow for importing pre-existing infrastructure into Terraform management using the declarative `import` block workflow (Terraform 1.5+), using a local Docker container as the primary target.
 
-Follow along with the [Learn Terraform Import tutorial](https://developer.hashicorp.com/terraform/tutorials/state/state-import).
-
-### Install prerequisites
-
-1. Terraform: https://www.terraform.io/downloads.html
-1. Docker: https://docs.docker.com/get-docker/
+### Resource Lifecycle Granularity
+* In Terraform, resources are tracked as independent state entities. 
+* High-level parent/child objects (such as `docker_container` and `docker_image`) possess distinct IDs and must be imported via separate `import` blocks if both are to be managed via Infrastructure as Code.
 
 ### Create a docker container
 
