@@ -1,0 +1,16 @@
+{
+    "Version": "2026-01-01",
+    "Statement": [
+        {
+            "Sid": "StorageBlobDataReader",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": [
+                "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"
+            ],
+            "Resource": [
+                "<STORAGE_ACCOUNT_ID>/blobServices/default/containers/data-container/*"
+            ]
+        }
+    ]
+}
